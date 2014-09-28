@@ -179,7 +179,8 @@ class AcousticProblemSponge(Problem.BaseProblem):
 
 		Grad = self.mesh.cellGrad
 		Div = self.mesh.faceDiv
-		AvF2CC = self.mesh.aveF2CC
+		# Be careful about averaging operator
+		AvF2CC = self.mesh.dim*self.mesh.aveF2CC
 		rho = 0.27*np.ones(self.mesh.nC)
 		mu = rho*v**2
 		DSig = sdiag(self.sig)
@@ -342,7 +343,8 @@ class AcousticProblemPML(Problem.BaseProblem):
 			self.mesh.setCellGradBC([['dirichlet', 'neumann'], ['dirichlet', 'neumann']])
 
 		Grad = self.mesh.cellGrad
-		AvF2CC = self.mesh.aveF2CC
+		# Be careful about averaging operator
+		AvF2CC = self.mesh.dim*self.mesh.aveF2CC
 		AvF2CCv = self.mesh.aveF2CCV
 		rho = 0.27*np.ones(self.mesh.nC)
 		mu = rho*v**2
