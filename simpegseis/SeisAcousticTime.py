@@ -3,7 +3,7 @@ from SimPEG.Utils import sdiag, mkvc, sdInv
 import matplotlib.pyplot as plt
 from time import clock
 
-class AcousticTx(Survey.BaseTx):
+class AcousticSrc(Survey.BaseSrc):
 
 
 	def __init__(self, loc, time, rxList, **kwargs):
@@ -45,9 +45,9 @@ class AcousticTx(Survey.BaseTx):
 
 	def getq(self, mesh):
 
-		txind = Utils.closestPoints(mesh, self.loc, gridLoc='CC')
+		srcind = Utils.closestPoints(mesh, self.loc, gridLoc='CC')
 		q = sdiag(1/mesh.vol)*np.zeros(mesh.nC)
-		q[txind] = 1.
+		q[srcind] = 1.
 
 		return q
 
@@ -80,15 +80,15 @@ class SurveyAcoustic(Survey.BaseSurvey):
 
 	"""
 
-	def __init__(self, txList,**kwargs):
-		self.txList = txList
+	def __init__(self, srcList,**kwargs):
+		self.srcList = srcList
 		Survey.BaseSurvey.__init__(self, **kwargs)
 
 	def projectFields(self, u):
 		data = []
 
-		for i, tx in enumerate(self.txList):
-			Proj = tx.rxList[0].getP(self.prob.mesh)
+		for i, src in enumerate(self.srcList):
+			Proj = src.rxList[0].getP(self.prob.mesh)
 			data.append(Proj*u[i])
 		return data
 
@@ -202,20 +202,20 @@ class AcousticProblemSponge(Problem.BaseProblem):
 		if self.storefield==True:
 			P = []
 			#TODO: parallize in terms of sources
-			ntx = len(self.survey.txList)
-			for itx, tx in enumerate(self.survey.txList):
-				print ("  Tx at (%7.2f, %7.2f): %4i/%4i")%(tx.loc[0], tx.loc[0], itx+1, ntx)
+			nsrc = len(self.survey.srcList)
+			for isrc, src in enumerate(self.survey.srcList):
+				print ("  Src at (%7.2f, %7.2f): %4i/%4i")%(src.loc[0], src.loc[0], isrc+1, nsrc)
 				pn = np.zeros(self.mesh.nC)
 				p0 = np.zeros_like(pn)
 				un = np.zeros(self.mesh.nF)
 				u0 = np.zeros_like(un)
-				time = tx.time
-				dt = tx.dt
+				time = src.time
+				dt = src.dt
 				p = np.zeros((self.mesh.nC, time.size))
-				q = tx.getq(self.mesh)
+				q = src.getq(self.mesh)
 				for i in range(time.size-1):
-					sn = tx.Wave(i+1)
-					s0 = tx.Wave(i)
+					sn = src.Wave(i+1)
+					s0 = src.Wave(i)
 					pn = p0-dt*DSig*p0+Drhoi*dt*(Div*un+(sn-s0)/dt*q)
 					p0 = pn.copy()
 					# un = u0 - dt*sdiag(AvF2CC.T*self.sig)*u0 + dt*MfmuiI*Grad*p0
@@ -233,21 +233,21 @@ class AcousticProblemSponge(Problem.BaseProblem):
 
 			Data = []
 
-			ntx = len(self.survey.txList)
-			for itx, tx in enumerate(self.survey.txList):
-				print ("  Tx at (%7.2f, %7.2f): %4i/%4i")%(tx.loc[0], tx.loc[0], itx+1, ntx)
+			nsrc = len(self.survey.srcList)
+			for isrc, src in enumerate(self.survey.srcList):
+				print ("  Src at (%7.2f, %7.2f): %4i/%4i")%(src.loc[0], src.loc[0], isrc+1, nsrc)
 				pn = np.zeros(self.mesh.nC)
 				p0 = np.zeros_like(pn)
 				un = np.zeros(self.mesh.nF)
 				u0 = np.zeros_like(un)
-				time = tx.time
-				dt = tx.dt
-				data = np.zeros((time.size, tx.nD))
-				q = tx.getq(self.mesh)
-				Proj = tx.rxList[0].getP(self.mesh)
+				time = src.time
+				dt = src.dt
+				data = np.zeros((time.size, src.nD))
+				q = src.getq(self.mesh)
+				Proj = src.rxList[0].getP(self.mesh)
 				for i in range(time.size-1):
-					sn = tx.Wave(i+1)
-					s0 = tx.Wave(i)
+					sn = src.Wave(i+1)
+					s0 = src.Wave(i)
 					pn = p0-dt*DSig*p0+Drhoi*dt*(Div*un+(sn-s0)/dt*q)
 					p0 = pn.copy()
 					# un = u0 - dt*sdiag(AvF2CC.T*self.sig)*u0 + dt*MfmuiI*Grad*p0
@@ -372,22 +372,22 @@ class AcousticProblemPML(Problem.BaseProblem):
 		if self.storefield==True:
 			Phi = []
 			#TODO: parallize in terms of sources
-			ntx = len(self.survey.txList)
-			for itx, tx in enumerate(self.survey.txList):
-				print ("  Tx at (%7.2f, %7.2f): %4i/%4i")%(tx.loc[0], tx.loc[0], itx+1, ntx)
-				phi = np.zeros((self.mesh.nC, tx.time.size))
+			nsrc = len(self.survey.srcList)
+			for isrc, src in enumerate(self.survey.srcList):
+				print ("  Src at (%7.2f, %7.2f): %4i/%4i")%(src.loc[0], src.loc[0], isrc+1, nsrc)
+				phi = np.zeros((self.mesh.nC, src.time.size))
 				phin = np.zeros(self.mesh.nC*2)
 				phi0 = np.zeros_like(phin)
 				un = np.zeros(self.mesh.nF)
 				u0 = np.zeros_like(un)
-				time = tx.time
-				dt = tx.dt
-				q = tx.getq(self.mesh)
+				time = src.time
+				dt = src.dt
+				q = src.getq(self.mesh)
 				qvec = np.r_[q, q]*1/2
 
 				for i in range(time.size-1):
-					sn = tx.Wave(i+1)
-					s0 = tx.Wave(i)
+					sn = src.Wave(i+1)
+					s0 = src.Wave(i)
 					phin = phi0-dt*(Msigcc*phi0)+dt*MrhoccI*(1/dt*(sn-s0)*qvec+Divvec*un)
 					phi0 = phin.copy()
 					un = u0 - dt*Msigf*u0 + dt*MmuifvecI*Grad*(Ivec*phi0)
@@ -403,22 +403,22 @@ class AcousticProblemPML(Problem.BaseProblem):
 
 			Data = []
 
-			ntx = len(self.survey.txList)
-			for itx, tx in enumerate(self.survey.txList):
-				print ("  Tx at (%7.2f, %7.2f): %4i/%4i")%(tx.loc[0], tx.loc[0], itx+1, ntx)
+			nsrc = len(self.survey.srcList)
+			for isrc, src in enumerate(self.survey.srcList):
+				print ("  Src at (%7.2f, %7.2f): %4i/%4i")%(src.loc[0], src.loc[0], isrc+1, nsrc)
 				phi = np.zeros((mesh.nC, time.size))
 				phin = np.zeros(mesh.nC*2)
 				phi0 = np.zeros_like(phin)
 				un = np.zeros(mesh.nF)
 				u0 = np.zeros_like(un)
-				time = tx.time
-				dt = tx.dt
+				time = src.time
+				dt = src.dt
 				p = np.zeros((self.mesh.nC, time.size))
-				q = tx.getq(self.mesh)
+				q = src.getq(self.mesh)
 				qvec = np.r_[q, q]*1/2
 				for i in range(time.size-1):
-					sn = tx.Wave(i+1)
-					s0 = tx.Wave(i)
+					sn = src.Wave(i+1)
+					s0 = src.Wave(i)
 					phin = phi0-dt*(Msigcc*phi0)+dt*MrhoccI*(1/dt*(sn-s0)*qvec+Divvec*un)
 					phi0 = phin.copy()
 					un = u0 - dt*Msigf*u0 + dt*MmuifvecI*Grad*(Ivec*phi0)
@@ -438,9 +438,9 @@ if __name__ == '__main__':
 	dt = time[1]-time[0]
 	options={'tlag':0.0025, 'fmain':400}
 	rx = AcousticRx(np.vstack((np.r_[0, 1], np.r_[0, 1])))
-	tx = AcousticTx(np.r_[0, 1], time, [rx], **options)
-	survey = SurveyAcoustic([tx])
-	wave = tx.RickerWavelet()
+	src = AcousticSrc(np.r_[0, 1], time, [rx], **options)
+	survey = SurveyAcoustic([src])
+	wave = src.RickerWavelet()
 	cs = 0.5
 	hx = np.ones(150)*cs
 	hy = np.ones(150)*cs
