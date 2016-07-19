@@ -13,6 +13,7 @@ class AcousticSrc(Survey.BaseSrc):
 		self.loc = loc
 		self.rxList = rxList
 		self.kwargs = kwargs
+		super(AcousticSrc, self).__init__(rxList)
 
 
 	def RickerWavelet(self):
@@ -457,4 +458,3 @@ if __name__ == '__main__':
 	fig, ax = plt.subplots(1, 1, figsize = (5,5))
 	ax.imshow(np.flipud(U[0][:,icount].reshape((mesh.nCx, mesh.nCy), order = 'F').T), cmap = 'binary')
 	plt.show()
-
