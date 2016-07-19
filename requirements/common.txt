@@ -1,0 +1,4 @@
+numpy
+scipy
+matplotlib
+simPEG==0.1.9
